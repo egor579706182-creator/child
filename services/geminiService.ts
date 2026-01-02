@@ -4,7 +4,7 @@ import { AssessmentData, AnalysisResult } from "../types";
 import { QUESTIONS } from "../constants";
 
 export async function analyzeAssessment(data: AssessmentData): Promise<AnalysisResult> {
-  // Инициализация строго по инструкции: используем переменную окружения напрямую.
+  // Инициализация нового экземпляра прямо перед вызовом для актуальности ключа
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY as string });
   
   const responsesText = data.responses.map(r => {
@@ -22,6 +22,8 @@ export async function analyzeAssessment(data: AssessmentData): Promise<AnalysisR
     
     Результаты тестирования:
     ${responsesText}
+    
+    Важно: Сформулируйте заключение на русском языке, используя профессиональную терминологию.
   `;
 
   try {
@@ -53,18 +55,19 @@ export async function analyzeAssessment(data: AssessmentData): Promise<AnalysisR
     });
 
     const resultText = response.text;
-    if (!resultText) throw new Error("AI не вернул данные. Проверьте лимиты вашего ключа.");
+    if (!resultText) throw new Error("AI вернул пустой ответ.");
     
     const result = JSON.parse(resultText);
     
     const sources = response.candidates?.[0]?.groundingMetadata?.groundingChunks?.map((chunk: any) => ({
       uri: chunk.web?.uri || "",
-      title: chunk.web?.title || "Источник"
+      title: chunk.web?.title || "Источник информации"
     })).filter((s: any) => s.uri) || [];
 
     return { ...result, sources };
   } catch (error: any) {
     console.error("Gemini API Error:", error);
-    throw new Error(error.message || "Ошибка при генерации отчета");
+    // Пробрасываем ошибку выше для обработки в UI
+    throw error;
   }
 }

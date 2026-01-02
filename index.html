@@ -13,13 +13,11 @@
     }
   </style>
   
-  <!-- Исправление для Vercel: создаем объект process до загрузки скриптов -->
   <script>
-    window.process = {
-      env: {
-        NODE_ENV: 'production'
-      }
-    };
+    // Безопасная инициализация объекта process
+    window.process = window.process || {};
+    window.process.env = window.process.env || {};
+    if (!window.process.env.NODE_ENV) window.process.env.NODE_ENV = 'production';
   </script>
 
 <script type="importmap">
@@ -36,7 +34,6 @@
 </head>
 <body class="bg-white">
   <div id="root"></div>
-  <!-- Явно загружаем входную точку приложения -->
   <script type="module" src="./index.tsx"></script>
 </body>
 </html>

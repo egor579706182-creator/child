@@ -4,13 +4,25 @@ import { AssessmentData, AnalysisResult } from "../types";
 import { QUESTIONS } from "../constants";
 
 export async function analyzeAssessment(data: AssessmentData): Promise<AnalysisResult> {
-  // Безопасное получение ключа
-  const apiKey = (window as any).process?.env?.API_KEY || process.env.API_KEY;
+  /**
+   * ПРАВИЛО: Ключ должен браться из process.env.API_KEY.
+   * Если после добавления ключа в Vercel вы видите ошибку, 
+   * ОБЯЗАТЕЛЬНО сделайте 'Redeploy' во вкладке Deployments.
+   */
+  const apiKey = process.env.API_KEY;
 
-  if (!apiKey || apiKey === "undefined") {
-    throw new Error("API_KEY не найден. Пожалуйста, добавьте переменную окружения API_KEY в настройках Vercel.");
+  if (!apiKey || apiKey === "undefined" || apiKey.length < 10) {
+    throw new Error(
+      "Ключ API не обнаружен в текущей сборке. \n\n" + 
+      "ИНСТРУКЦИЯ: \n" +
+      "1. Вы уже добавили API_KEY в Settings -> Environment Variables (судя по скриншоту).\n" +
+      "2. Теперь перейдите во вкладку 'Deployments'.\n" +
+      "3. Нажмите на последние три точки и выберите 'Redeploy'.\n" +
+      "Это необходимо, чтобы Vercel передал ключ в код приложения."
+    );
   }
 
+  // Создаем экземпляр прямо перед вызовом, как требует инструкция
   const ai = new GoogleGenAI({ apiKey });
   
   const responsesText = data.responses.map(r => {
@@ -24,7 +36,7 @@ export async function analyzeAssessment(data: AssessmentData): Promise<AnalysisR
     
     ВАЖНОЕ ПРАВИЛО ФОРМАТИРОВАНИЯ: 
     В ответе КАТЕГОРИЧЕСКИ ЗАПРЕЩЕНО использовать любые символы форматирования Markdown, особенно двойные звездочки '**'. 
-    Текст должен быть абсолютно чистым, без спецсимволов. Используйте только переносы строк и списки.
+    Текст должен быть абсолютно чистым. Используйте только переносы строк и обычные списки.
     
     Данные ребенка:
     - Возраст: ${data.age} лет
@@ -36,13 +48,13 @@ export async function analyzeAssessment(data: AssessmentData): Promise<AnalysisR
     Сформируйте ответ СТРОГО в формате JSON:
     {
       "impairmentLevel": "Уровень (чистый текст)",
-      "clinicalInterpretation": "Анализ (чистый текст без **)",
-      "recommendations": ["Рекомендация 1 (чистый текст)", "..."],
-      "prognosis": "Прогноз (чистый текст без **)",
+      "clinicalInterpretation": "Анализ (чистый текст)",
+      "recommendations": ["Рекомендация 1", "..."],
+      "prognosis": "Прогноз (чистый текст)",
       "scientificContext": {
-        "english": "Summary (no **)",
-        "russian": "Резюме (без **)",
-        "german": "Zusammenfassung (ohne **)"
+        "english": "Summary EN",
+        "russian": "Резюме RU",
+        "german": "Zusammenfassung DE"
       }
     }
   `;
@@ -67,6 +79,9 @@ export async function analyzeAssessment(data: AssessmentData): Promise<AnalysisR
     return { ...result, sources };
   } catch (error: any) {
     console.error("Analysis Error:", error);
+    if (error.message?.includes("entity was not found")) {
+      throw new Error("Проблема с ключом или проектом в Google AI Studio. Пересоздайте ключ.");
+    }
     throw new Error(`Ошибка AI: ${error.message || "Не удалось получить ответ"}`);
   }
 }

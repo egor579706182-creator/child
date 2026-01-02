@@ -17,7 +17,8 @@ const App: React.FC = () => {
       setAnalysisResult(result);
       setView('result');
     } catch (error: any) {
-      alert(error.message);
+      console.error("Application Error:", error);
+      alert(`Ошибка: ${error.message || 'Не удалось получить ответ от системы'}`);
       setView('form');
     }
   };
@@ -29,24 +30,25 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-white text-black font-sans selection:bg-gray-100 selection:text-black">
-      {view === 'form' && (
-        <div className="flex flex-col items-center pt-10 px-4">
-          <div className="mb-8 text-center">
-            <h1 className="text-xs font-black uppercase tracking-[0.4em] text-gray-300">CommuniScale Pro</h1>
-          </div>
+      <div className="flex flex-col items-center pt-10 px-4">
+        <div className="mb-8 text-center">
+          <h1 className="text-xs font-black uppercase tracking-[0.4em] text-gray-300">CommuniScale Pro</h1>
+        </div>
+
+        {view === 'form' && (
           <AssessmentForm onComplete={handleAssessmentComplete} />
-        </div>
-      )}
+        )}
 
-      {view === 'loading' && (
-        <div className="flex flex-col items-center justify-center min-h-screen">
-          <CloudAnimation />
-        </div>
-      )}
+        {view === 'loading' && (
+          <div className="flex flex-col items-center justify-center py-20 w-full">
+            <CloudAnimation />
+          </div>
+        )}
 
-      {view === 'result' && analysisResult && (
-        <ResultDashboard result={analysisResult} onReset={handleReset} />
-      )}
+        {view === 'result' && analysisResult && (
+          <ResultDashboard result={analysisResult} onReset={handleReset} />
+        )}
+      </div>
     </div>
   );
 };

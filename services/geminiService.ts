@@ -4,15 +4,8 @@ import { AssessmentData, AnalysisResult } from "../types";
 import { QUESTIONS } from "../constants";
 
 export async function analyzeAssessment(data: AssessmentData): Promise<AnalysisResult> {
-  // ПРАВИЛО: Ключ должен браться из process.env.API_KEY.
-  const apiKey = process.env.API_KEY;
-
-  if (!apiKey || apiKey === "undefined" || apiKey.length < 10) {
-    throw new Error("API key is missing or invalid. Please check the environment configuration.");
-  }
-
-  // Создаем экземпляр прямо перед вызовом
-  const ai = new GoogleGenAI({ apiKey });
+  // Инициализация строго по инструкции: используем переменную окружения напрямую.
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY as string });
   
   const responsesText = data.responses.map(r => {
     const q = QUESTIONS.find(quest => quest.id === r.questionId);
@@ -32,7 +25,6 @@ export async function analyzeAssessment(data: AssessmentData): Promise<AnalysisR
   `;
 
   try {
-    // Fixed: Using responseSchema as the recommended way to handle structured output
     const response = await ai.models.generateContent({
       model: "gemini-3-pro-preview",
       contents: prompt,
@@ -60,13 +52,11 @@ export async function analyzeAssessment(data: AssessmentData): Promise<AnalysisR
       }
     });
 
-    // Access the text property directly as it returns the string output
     const resultText = response.text;
-    if (!resultText) throw new Error("Empty response from AI");
+    if (!resultText) throw new Error("AI не вернул данные. Проверьте лимиты вашего ключа.");
     
     const result = JSON.parse(resultText);
     
-    // Extracting URLs from groundingChunks as required when using googleSearch
     const sources = response.candidates?.[0]?.groundingMetadata?.groundingChunks?.map((chunk: any) => ({
       uri: chunk.web?.uri || "",
       title: chunk.web?.title || "Источник"
@@ -74,10 +64,7 @@ export async function analyzeAssessment(data: AssessmentData): Promise<AnalysisR
 
     return { ...result, sources };
   } catch (error: any) {
-    console.error("Analysis Error:", error);
-    if (error.message?.includes("entity was not found")) {
-      throw new Error("API entity error. Please re-check the key in Google AI Studio.");
-    }
-    throw new Error(`Ошибка AI: ${error.message || "Не удалось получить ответ"}`);
+    console.error("Gemini API Error:", error);
+    throw new Error(error.message || "Ошибка при генерации отчета");
   }
 }

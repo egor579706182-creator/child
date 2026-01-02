@@ -1,4 +1,5 @@
 
+// Fixed: Added missing React import to resolve namespace error
 import React, { useState } from 'react';
 import { QUESTIONS } from '../constants';
 import { AssessmentData, Gender, AssessmentResponse } from '../types';
@@ -22,6 +23,17 @@ export const AssessmentForm: React.FC<AssessmentFormProps> = ({ onComplete }) =>
       setStep(step + 1);
     } else {
       onComplete({ age: Number(age), gender, responses });
+    }
+  };
+
+  const handleSkip = () => {
+    if (step > 0 && step <= QUESTIONS.length) {
+      const currentId = QUESTIONS[step - 1].id;
+      // Если ответ еще не выбран, ставим нейтральное значение (3)
+      if (!responses.find(r => r.questionId === currentId)) {
+        handleResponse(currentId, 3);
+      }
+      handleNext();
     }
   };
 
@@ -91,11 +103,18 @@ export const AssessmentForm: React.FC<AssessmentFormProps> = ({ onComplete }) =>
         ))}
       </div>
 
-      <div className="flex gap-3">
-        <Button variant="outline" onClick={handlePrevious} className="px-8">Назад</Button>
-        <Button disabled={!currentResponse} onClick={handleNext} className="flex-1">
-          {step === QUESTIONS.length ? 'Сформировать отчет' : 'Следующий вопрос'}
-        </Button>
+      <div className="flex flex-col gap-3">
+        <div className="flex gap-3 w-full">
+          <Button variant="outline" onClick={handlePrevious} className="flex-1">Назад</Button>
+          <Button disabled={!currentResponse} onClick={handleNext} className="flex-[2]">
+            {step === QUESTIONS.length ? 'Сформировать отчет' : 'Следующий вопрос'}
+          </Button>
+        </div>
+        {!currentResponse && (
+          <Button variant="outline" onClick={handleSkip} className="w-full text-gray-400 border-dashed border-gray-200 hover:text-gray-600 hover:bg-gray-50 text-xs py-2">
+            Пропустить (не уверен / не наблюдалось)
+          </Button>
+        )}
       </div>
     </div>
   );

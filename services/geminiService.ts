@@ -1,10 +1,10 @@
-
 import { GoogleGenAI, Type } from "@google/genai";
 import { AssessmentData, AnalysisResult } from "../types";
 import { QUESTIONS } from "../constants";
 
 export async function analyzeAssessment(data: AssessmentData): Promise<AnalysisResult> {
-  // Инициализация строго по инструкции через process.env.API_KEY
+  // Инициализация строго через process.env.API_KEY согласно системным требованиям.
+  // Окружение (Vercel/Vite) должно обеспечить подстановку этого значения при сборке.
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY as string });
   
   const responsesText = data.responses.map(r => {
@@ -13,13 +13,17 @@ export async function analyzeAssessment(data: AssessmentData): Promise<AnalysisR
   }).join("\n");
 
   const prompt = `
-    Вы — ведущий эксперт в области детской коммуникации. 
-    Проведите анализ профиля ребенка (${data.age} лет, ${data.gender}).
+    Вы — ведущий мировой эксперт в области детской коммуникации и логопедии. 
+    Проведите глубокий клинический анализ профиля ребенка.
     
-    Результаты теста:
+    Данные ребенка:
+    - Возраст: ${data.age} лет
+    - Пол: ${data.gender}
+    
+    Результаты тестирования (шкала 1-5, где 1 - минимальное проявление/отсутствие, 5 - норма/максимум):
     ${responsesText}
     
-    Подготовьте подробное клиническое заключение на русском языке.
+    Сформулируйте подробное заключение на русском языке. Используйте профессиональную терминологию.
   `;
 
   try {
@@ -32,10 +36,23 @@ export async function analyzeAssessment(data: AssessmentData): Promise<AnalysisR
         responseSchema: {
           type: Type.OBJECT,
           properties: {
-            impairmentLevel: { type: Type.STRING },
-            clinicalInterpretation: { type: Type.STRING },
-            recommendations: { type: Type.ARRAY, items: { type: Type.STRING } },
-            prognosis: { type: Type.STRING },
+            impairmentLevel: { 
+              type: Type.STRING,
+              description: "Краткий уровень нарушения (например, 'Норма', 'Легкая задержка', 'Умеренное нарушение')."
+            },
+            clinicalInterpretation: { 
+              type: Type.STRING, 
+              description: "Подробный разбор профиля коммуникации."
+            },
+            recommendations: { 
+              type: Type.ARRAY, 
+              items: { type: Type.STRING },
+              description: "Список практических рекомендаций."
+            },
+            prognosis: { 
+              type: Type.STRING,
+              description: "Клинический прогноз."
+            },
             scientificContext: {
               type: Type.OBJECT,
               properties: {
@@ -51,19 +68,19 @@ export async function analyzeAssessment(data: AssessmentData): Promise<AnalysisR
     });
 
     const resultText = response.text;
-    if (!resultText) throw new Error("AI не вернул данных.");
+    if (!resultText) throw new Error("AI не вернул текстовое содержимое.");
     
     const result = JSON.parse(resultText);
     
     const sources = response.candidates?.[0]?.groundingMetadata?.groundingChunks?.map((chunk: any) => ({
       uri: chunk.web?.uri || "",
-      title: chunk.web?.title || "Источник"
+      title: chunk.web?.title || "Научный источник"
     })).filter((s: any) => s.uri) || [];
 
     return { ...result, sources };
   } catch (error: any) {
-    console.error("Gemini API Error:", error);
-    // Если ошибка связана с ключом, это будет видно в консоли
-    throw new Error(error.message || "Ошибка API. Убедитесь, что API_KEY в Vercel установлен корректно.");
+    console.error("Gemini API Error Details:", error);
+    // Пробрасываем ошибку выше для обработки в UI
+    throw error;
   }
 }

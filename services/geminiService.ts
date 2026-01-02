@@ -6,10 +6,11 @@ import { QUESTIONS } from "../constants";
 export async function analyzeAssessment(data: AssessmentData): Promise<AnalysisResult> {
   const apiKey = process.env.API_KEY;
   
-  if (!apiKey || apiKey === 'undefined') {
-    throw new Error("API ключ не обнаружен. Если вы развернули приложение на Vercel, добавьте переменную окружения API_KEY в настройках проекта.");
+  if (!apiKey) {
+    throw new Error("API_KEY не найден в переменых окружения (process.env.API_KEY).");
   }
 
+  // Создаем новый экземпляр при каждом вызове для актуальности ключа
   const ai = new GoogleGenAI({ apiKey });
   
   const responsesText = data.responses.map(r => {

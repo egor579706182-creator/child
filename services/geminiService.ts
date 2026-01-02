@@ -4,8 +4,13 @@ import { AssessmentData, AnalysisResult } from "../types";
 import { QUESTIONS } from "../constants";
 
 export async function analyzeAssessment(data: AssessmentData): Promise<AnalysisResult> {
-  // Инициализация нового экземпляра прямо перед вызовом для актуальности ключа
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY as string });
+  const apiKey = process.env.API_KEY;
+  
+  if (!apiKey || apiKey === 'undefined') {
+    throw new Error("API ключ не обнаружен. Если вы развернули приложение на Vercel, добавьте переменную окружения API_KEY в настройках проекта.");
+  }
+
+  const ai = new GoogleGenAI({ apiKey });
   
   const responsesText = data.responses.map(r => {
     const q = QUESTIONS.find(quest => quest.id === r.questionId);
@@ -28,7 +33,7 @@ export async function analyzeAssessment(data: AssessmentData): Promise<AnalysisR
 
   try {
     const response = await ai.models.generateContent({
-      model: "gemini-3-pro-preview",
+      model: "gemini-3-flash-preview",
       contents: prompt,
       config: {
         tools: [{ googleSearch: {} }],
@@ -67,7 +72,6 @@ export async function analyzeAssessment(data: AssessmentData): Promise<AnalysisR
     return { ...result, sources };
   } catch (error: any) {
     console.error("Gemini API Error:", error);
-    // Пробрасываем ошибку выше для обработки в UI
     throw error;
   }
 }

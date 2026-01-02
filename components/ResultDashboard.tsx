@@ -1,4 +1,3 @@
-
 import React, { useRef, useState } from 'react';
 import { AnalysisResult } from '../types';
 import { Button } from './Button';
@@ -20,8 +19,8 @@ export const ResultDashboard: React.FC<ResultDashboardProps> = ({ result, onRese
     setIsExporting(true);
     
     const opt = {
-      margin: [15, 10, 15, 10], // верх, лево, низ, право
-      filename: `CommuniScale_Report_${new Date().toLocaleDateString('ru-RU').replace(/\./g, '_')}.pdf`,
+      margin: [5, 5, 5, 5], 
+      filename: `Report_${new Date().toLocaleDateString('ru-RU').replace(/\./g, '_')}.pdf`,
       image: { type: 'jpeg', quality: 0.98 },
       html2canvas: { 
         scale: 2, 
@@ -29,15 +28,13 @@ export const ResultDashboard: React.FC<ResultDashboardProps> = ({ result, onRese
         letterRendering: true,
       },
       jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-      pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+      pagebreak: { mode: 'avoid-all' }
     };
 
     try {
-      // Генерируем PDF из элемента reportRef
       await html2pdf().set(opt).from(reportRef.current).save();
     } catch (error) {
       console.error('PDF Generation Error:', error);
-      // Если библиотека не сработала (например, в очень старом браузере), используем системную печать
       window.print();
     } finally {
       setIsExporting(false);
@@ -45,95 +42,85 @@ export const ResultDashboard: React.FC<ResultDashboardProps> = ({ result, onRese
   };
 
   const handleBookConsultation = () => {
-    // Вставьте сюда реальную ссылку на вашу форму или календарь
     window.open('https://example.com/booking', '_blank');
   };
 
   return (
-    <div className="max-w-4xl mx-auto p-6 space-y-10 print:p-0">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center border-b border-gray-100 pb-4 gap-4 print:hidden no-print">
-        <h1 className="font-bold text-gray-300 text-[10px] uppercase tracking-[0.3em]">Профессиональный отчет</h1>
+    <div className="max-w-4xl mx-auto p-4 space-y-4 print:p-0">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center border-b border-gray-100 pb-2 gap-2 print:hidden no-print">
+        <h1 className="font-bold text-gray-300 text-[9px] uppercase tracking-[0.3em]">Report Dashboard</h1>
         <div className="flex flex-wrap gap-2">
           <Button 
             variant="outline" 
             onClick={handleDownloadPDF} 
             loading={isExporting}
             disabled={isExporting}
-            className="text-[10px] uppercase py-2 px-4 min-w-[120px]"
+            className="text-[9px] uppercase py-1.5 px-3 min-w-[100px]"
           >
             {isExporting ? 'Создание...' : 'Скачать PDF'}
           </Button>
-          <Button onClick={handleBookConsultation} className="text-[10px] uppercase py-2 px-4 bg-black text-white hover:bg-gray-800 transition-colors shadow-lg active:scale-95">
-            Записаться на консультацию
+          <Button onClick={handleBookConsultation} className="text-[9px] uppercase py-1.5 px-3 bg-black text-white hover:bg-gray-800">
+            Консультация
           </Button>
-          <Button variant="outline" onClick={onReset} className="text-[10px] uppercase py-2 px-4">Новый тест</Button>
+          <Button variant="outline" onClick={onReset} className="text-[9px] uppercase py-1.5 px-3">Новый тест</Button>
         </div>
       </div>
 
-      {/* Контейнер для экспорта в PDF */}
-      <div ref={reportRef} className="space-y-12 py-8 px-4 bg-white rounded-xl">
-        <header className="text-center space-y-4">
-          <h2 className="text-4xl font-black text-gray-900 tracking-tighter">Клиническое заключение</h2>
-          <div className="inline-block px-6 py-1 bg-black text-white text-[10px] font-bold uppercase tracking-[0.2em]">
+      {/* Компактный контейнер для А4 */}
+      <div ref={reportRef} className="space-y-4 py-4 px-6 bg-white rounded-lg border border-gray-50 shadow-sm print:border-0 print:shadow-none">
+        <header className="text-center space-y-2">
+          <h2 className="text-2xl font-black text-gray-900 tracking-tight">Клиническое заключение</h2>
+          <div className="inline-block px-4 py-0.5 bg-black text-white text-[9px] font-bold uppercase tracking-[0.2em]">
             {result.impairmentLevel}
           </div>
         </header>
 
-        <section className="space-y-4">
-          <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 border-b pb-2">Интерпретация профиля</h3>
-          <p className="text-gray-800 text-lg leading-relaxed whitespace-pre-wrap">{result.clinicalInterpretation}</p>
+        <section className="space-y-1">
+          <h3 className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-400 border-b pb-1">Интерпретация профиля</h3>
+          <p className="text-gray-800 text-sm leading-snug whitespace-pre-wrap">{result.clinicalInterpretation}</p>
         </section>
 
-        <section className="space-y-4">
-          <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 border-b pb-2">Рекомендации специалиста</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <section className="space-y-1">
+          <h3 className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-400 border-b pb-1">Рекомендации</h3>
+          <div className="grid grid-cols-2 gap-2">
             {result.recommendations.map((rec, i) => (
               <div 
                 key={i} 
-                className="p-4 border border-gray-100 bg-gray-50/50 rounded-lg text-sm leading-relaxed text-gray-700"
-                style={{ breakInside: 'avoid' }}
+                className="p-2 border border-gray-100 bg-gray-50/30 rounded text-[11px] leading-tight text-gray-700"
               >
-                <span className="font-bold text-black mr-2">{i + 1}.</span>
+                <span className="font-bold text-black mr-1">{i + 1}.</span>
                 {rec}
               </div>
             ))}
           </div>
         </section>
 
-        <section className="bg-black text-white p-10 rounded-3xl" style={{ breakInside: 'avoid' }}>
-          <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 mb-4">Прогноз развития</h3>
-          <p className="text-xl font-light leading-relaxed">{result.prognosis}</p>
+        <section className="bg-black text-white p-4 rounded-xl" style={{ breakInside: 'avoid' }}>
+          <h3 className="text-[8px] font-black uppercase tracking-[0.2em] text-gray-500 mb-1">Прогноз развития</h3>
+          <p className="text-sm font-light leading-snug">{result.prognosis}</p>
         </section>
 
-        <section className="grid grid-cols-1 md:grid-cols-3 gap-8 pt-8 border-t border-gray-100" style={{ breakInside: 'avoid' }}>
-          <div className="space-y-2">
-            <span className="text-[9px] font-black uppercase text-blue-500 tracking-tighter">Scientific Context (EN)</span>
-            <p className="text-[11px] text-gray-500 leading-relaxed italic">{result.scientificContext.english}</p>
+        <section className="grid grid-cols-3 gap-4 pt-2 border-t border-gray-100" style={{ breakInside: 'avoid' }}>
+          <div className="space-y-1">
+            <span className="text-[8px] font-black uppercase text-blue-500 tracking-tighter">Scientific (EN)</span>
+            <p className="text-[9px] text-gray-500 leading-tight italic">{result.scientificContext.english}</p>
           </div>
-          <div className="space-y-2">
-            <span className="text-[9px] font-black uppercase text-red-500 tracking-tighter">Научный контекст (RU)</span>
-            <p className="text-[11px] text-gray-500 leading-relaxed italic">{result.scientificContext.russian}</p>
+          <div className="space-y-1">
+            <span className="text-[8px] font-black uppercase text-red-500 tracking-tighter">Наука (RU)</span>
+            <p className="text-[9px] text-gray-500 leading-tight italic">{result.scientificContext.russian}</p>
           </div>
-          <div className="space-y-2">
-            <span className="text-[9px] font-black uppercase text-orange-500 tracking-tighter">Wissenschaft (DE)</span>
-            <p className="text-[11px] text-gray-500 leading-relaxed italic">{result.scientificContext.german}</p>
+          <div className="space-y-1">
+            <span className="text-[8px] font-black uppercase text-orange-500 tracking-tighter">Wissenschaft (DE)</span>
+            <p className="text-[9px] text-gray-500 leading-tight italic">{result.scientificContext.german}</p>
           </div>
         </section>
 
         {result.sources.length > 0 && (
-          <footer className="pt-10 border-t border-gray-50">
-            <div className="text-[9px] font-bold uppercase text-gray-300 mb-4 tracking-widest no-print">Цитируемые источники</div>
-            <div className="flex flex-wrap gap-x-6 gap-y-2">
-              {result.sources.map((s, i) => (
-                <a 
-                  key={i} 
-                  href={s.uri} 
-                  target="_blank" 
-                  rel="noopener noreferrer" 
-                  className="text-[10px] text-gray-400 hover:text-black transition-colors underline decoration-gray-100 underline-offset-4"
-                >
-                  {s.title}
-                </a>
+          <footer className="pt-2 border-t border-gray-50 flex items-center justify-between">
+            <div className="text-[8px] font-bold uppercase text-gray-300 tracking-widest">Источники:</div>
+            <div className="flex flex-wrap gap-x-3 text-[8px]">
+              {result.sources.slice(0, 3).map((s, i) => (
+                <a key={i} href={s.uri} target="_blank" rel="noopener noreferrer" className="text-gray-400 underline">{s.title}</a>
               ))}
             </div>
           </footer>
@@ -143,11 +130,10 @@ export const ResultDashboard: React.FC<ResultDashboardProps> = ({ result, onRese
       <style>
         {`
           @media print {
-            body { background: white !important; padding: 0 !important; }
+            body { background: white !important; }
             .print\\:hidden, .no-print { display: none !important; }
-            @page { margin: 1cm; }
+            @page { size: A4; margin: 5mm; }
             * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-            .rounded-3xl { border-radius: 1rem !important; }
           }
         `}
       </style>

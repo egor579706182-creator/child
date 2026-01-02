@@ -3,17 +3,12 @@ import { AssessmentData, AnalysisResult } from "../types";
 import { QUESTIONS } from "../constants";
 
 export async function analyzeAssessment(data: AssessmentData): Promise<AnalysisResult> {
-  // Каскадный поиск ключа: 
-  // 1. Стандартный process.env (если подставлен сборщиком)
-  // 2. Vite-специфичный import.meta.env
-  // 3. Глобальный объект window (для некоторых платформ)
   let apiKey = (process.env.API_KEY) || 
                (import.meta as any).env?.VITE_API_KEY ||
                (import.meta as any).env?.API_KEY ||
                (window as any).process?.env?.API_KEY ||
                (window as any).process?.env?.VITE_API_KEY;
 
-  // Если ключ не найден в переменных, пробуем вызвать системный диалог выбора (если среда поддерживает)
   const aistudio = (window as any).aistudio;
   if (!apiKey && aistudio) {
     try {
@@ -21,14 +16,12 @@ export async function analyzeAssessment(data: AssessmentData): Promise<AnalysisR
       if (!hasKey) {
         await aistudio.openSelectKey();
       }
-      // После выбора ключа среда должна обновить process.env.API_KEY
       apiKey = (process.env.API_KEY) || (window as any).process?.env?.API_KEY;
     } catch (e) {
       console.warn("AI Studio API key selection failed:", e);
     }
   }
 
-  // Если ключ все еще пуст, выбрасываем информативную ошибку
   if (!apiKey || apiKey === "undefined" || apiKey === "") {
     throw new Error(
       "API_KEY не найден. \n\n" +
@@ -37,7 +30,6 @@ export async function analyzeAssessment(data: AssessmentData): Promise<AnalysisR
     );
   }
 
-  // Инициализируем SDK
   const ai = new GoogleGenAI({ apiKey });
   
   const responsesText = data.responses.map(r => {
@@ -50,7 +42,9 @@ export async function analyzeAssessment(data: AssessmentData): Promise<AnalysisR
     Проведите анализ профиля ребенка (${data.age} лет, ${data.gender}).
     Результаты теста:
     ${responsesText}
-    Подготовьте подробное экспертное заключение на русском языке.
+    
+    Подготовьте подробное экспертное заключение на русском языке. 
+    ВАЖНО: Поле 'clinicalInterpretation' должно быть представлено в виде пронумерованного списка (1, 2, 3...), где каждый пункт начинается с НОВОЙ СТРОКИ. Не пишите сплошным текстом.
   `;
 
   try {
@@ -93,7 +87,6 @@ export async function analyzeAssessment(data: AssessmentData): Promise<AnalysisR
 
     return { ...result, sources };
   } catch (error: any) {
-    // Если ошибка связана с отсутствием сущности, пробуем перевыбрать ключ
     if (error.message?.includes("Requested entity was not found") && aistudio) {
       await aistudio.openSelectKey();
     }

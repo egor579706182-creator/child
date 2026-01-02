@@ -4,8 +4,14 @@ import { AssessmentData, AnalysisResult } from "../types";
 import { QUESTIONS } from "../constants";
 
 export async function analyzeAssessment(data: AssessmentData): Promise<AnalysisResult> {
-  // Используем ключ из переменных окружения Vercel
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  // Безопасное получение ключа
+  const apiKey = (window as any).process?.env?.API_KEY || process.env.API_KEY;
+
+  if (!apiKey || apiKey === "undefined") {
+    throw new Error("API_KEY не найден. Пожалуйста, добавьте переменную окружения API_KEY в настройках Vercel.");
+  }
+
+  const ai = new GoogleGenAI({ apiKey });
   
   const responsesText = data.responses.map(r => {
     const q = QUESTIONS.find(quest => quest.id === r.questionId);
@@ -18,7 +24,7 @@ export async function analyzeAssessment(data: AssessmentData): Promise<AnalysisR
     
     ВАЖНОЕ ПРАВИЛО ФОРМАТИРОВАНИЯ: 
     В ответе КАТЕГОРИЧЕСКИ ЗАПРЕЩЕНО использовать любые символы форматирования Markdown, особенно двойные звездочки '**'. 
-    Текст должен быть абсолютно чистым, без спецсимволов. Используйте только переносы строк и обычные списки.
+    Текст должен быть абсолютно чистым, без спецсимволов. Используйте только переносы строк и списки.
     
     Данные ребенка:
     - Возраст: ${data.age} лет
@@ -39,8 +45,6 @@ export async function analyzeAssessment(data: AssessmentData): Promise<AnalysisR
         "german": "Zusammenfassung (ohne **)"
       }
     }
-    
-    Используйте Google Search для верификации актуальных данных.
   `;
 
   try {
@@ -61,8 +65,8 @@ export async function analyzeAssessment(data: AssessmentData): Promise<AnalysisR
     })).filter((s: any) => s.uri) || [];
 
     return { ...result, sources };
-  } catch (error) {
+  } catch (error: any) {
     console.error("Analysis Error:", error);
-    throw new Error("Не удалось сформировать отчет. Убедитесь, что API_KEY настроен в Vercel.");
+    throw new Error(`Ошибка AI: ${error.message || "Не удалось получить ответ"}`);
   }
 }

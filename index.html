@@ -12,6 +12,16 @@
       .no-print { display: none !important; }
     }
   </style>
+  
+  <!-- Исправление для Vercel: создаем объект process до загрузки скриптов -->
+  <script>
+    window.process = {
+      env: {
+        NODE_ENV: 'production'
+      }
+    };
+  </script>
+
 <script type="importmap">
 {
   "imports": {
@@ -26,5 +36,7 @@
 </head>
 <body class="bg-white">
   <div id="root"></div>
+  <!-- Явно загружаем входную точку приложения -->
+  <script type="module" src="./index.tsx"></script>
 </body>
 </html>

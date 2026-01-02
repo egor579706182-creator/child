@@ -17,10 +17,8 @@ const App: React.FC = () => {
       setAnalysisResult(result);
       setView('result');
     } catch (error: any) {
-      console.error("Application Error:", error);
-      // Если ключ не найден или API вернуло ошибку, выводим её пользователю
-      const msg = error.message || "Произошла ошибка при анализе. Проверьте настройки API ключа в вашем окружении.";
-      alert(`Ошибка анализа: ${msg}`);
+      console.error("App Error:", error);
+      alert(`Внимание: ${error.message}\n\nУбедитесь, что в настройках Vercel добавлена переменная API_KEY.`);
       setView('form');
     }
   };

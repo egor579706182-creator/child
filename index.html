@@ -6,6 +6,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>CommuniScale Pro - Assessment</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    // Обеспечиваем наличие объекта process для библиотек
+    window.process = window.process || { env: {} };
+  </script>
   <style>
     body { font-family: ui-sans-serif, system-ui, sans-serif; }
     @media print {

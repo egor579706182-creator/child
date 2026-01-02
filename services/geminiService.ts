@@ -3,9 +3,42 @@ import { AssessmentData, AnalysisResult } from "../types";
 import { QUESTIONS } from "../constants";
 
 export async function analyzeAssessment(data: AssessmentData): Promise<AnalysisResult> {
-  // Инициализация строго через process.env.API_KEY согласно системным требованиям.
-  // Окружение (Vercel/Vite) должно обеспечить подстановку этого значения при сборке.
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY as string });
+  // Каскадный поиск ключа: 
+  // 1. Стандартный process.env (если подставлен сборщиком)
+  // 2. Vite-специфичный import.meta.env
+  // 3. Глобальный объект window (для некоторых платформ)
+  let apiKey = (process.env.API_KEY) || 
+               (import.meta as any).env?.VITE_API_KEY ||
+               (import.meta as any).env?.API_KEY ||
+               (window as any).process?.env?.API_KEY ||
+               (window as any).process?.env?.VITE_API_KEY;
+
+  // Если ключ не найден в переменных, пробуем вызвать системный диалог выбора (если среда поддерживает)
+  const aistudio = (window as any).aistudio;
+  if (!apiKey && aistudio) {
+    try {
+      const hasKey = await aistudio.hasSelectedApiKey();
+      if (!hasKey) {
+        await aistudio.openSelectKey();
+      }
+      // После выбора ключа среда должна обновить process.env.API_KEY
+      apiKey = (process.env.API_KEY) || (window as any).process?.env?.API_KEY;
+    } catch (e) {
+      console.warn("AI Studio API key selection failed:", e);
+    }
+  }
+
+  // Если ключ все еще пуст, выбрасываем информативную ошибку
+  if (!apiKey || apiKey === "undefined" || apiKey === "") {
+    throw new Error(
+      "API_KEY не найден. \n\n" +
+      "Техническая деталь: Браузерная среда не получила переменную из Vercel. \n" +
+      "Попробуйте переименовать переменную в Vercel в 'VITE_API_KEY' и сделать Redeploy."
+    );
+  }
+
+  // Инициализируем SDK
+  const ai = new GoogleGenAI({ apiKey });
   
   const responsesText = data.responses.map(r => {
     const q = QUESTIONS.find(quest => quest.id === r.questionId);
@@ -13,17 +46,11 @@ export async function analyzeAssessment(data: AssessmentData): Promise<AnalysisR
   }).join("\n");
 
   const prompt = `
-    Вы — ведущий мировой эксперт в области детской коммуникации и логопедии. 
-    Проведите глубокий клинический анализ профиля ребенка.
-    
-    Данные ребенка:
-    - Возраст: ${data.age} лет
-    - Пол: ${data.gender}
-    
-    Результаты тестирования (шкала 1-5, где 1 - минимальное проявление/отсутствие, 5 - норма/максимум):
+    Вы — ведущий мировой эксперт в области детской коммуникации. 
+    Проведите анализ профиля ребенка (${data.age} лет, ${data.gender}).
+    Результаты теста:
     ${responsesText}
-    
-    Сформулируйте подробное заключение на русском языке. Используйте профессиональную терминологию.
+    Подготовьте подробное экспертное заключение на русском языке.
   `;
 
   try {
@@ -36,23 +63,10 @@ export async function analyzeAssessment(data: AssessmentData): Promise<AnalysisR
         responseSchema: {
           type: Type.OBJECT,
           properties: {
-            impairmentLevel: { 
-              type: Type.STRING,
-              description: "Краткий уровень нарушения (например, 'Норма', 'Легкая задержка', 'Умеренное нарушение')."
-            },
-            clinicalInterpretation: { 
-              type: Type.STRING, 
-              description: "Подробный разбор профиля коммуникации."
-            },
-            recommendations: { 
-              type: Type.ARRAY, 
-              items: { type: Type.STRING },
-              description: "Список практических рекомендаций."
-            },
-            prognosis: { 
-              type: Type.STRING,
-              description: "Клинический прогноз."
-            },
+            impairmentLevel: { type: Type.STRING },
+            clinicalInterpretation: { type: Type.STRING },
+            recommendations: { type: Type.ARRAY, items: { type: Type.STRING } },
+            prognosis: { type: Type.STRING },
             scientificContext: {
               type: Type.OBJECT,
               properties: {
@@ -68,19 +82,22 @@ export async function analyzeAssessment(data: AssessmentData): Promise<AnalysisR
     });
 
     const resultText = response.text;
-    if (!resultText) throw new Error("AI не вернул текстовое содержимое.");
+    if (!resultText) throw new Error("AI вернул пустой ответ.");
     
     const result = JSON.parse(resultText);
     
     const sources = response.candidates?.[0]?.groundingMetadata?.groundingChunks?.map((chunk: any) => ({
       uri: chunk.web?.uri || "",
-      title: chunk.web?.title || "Научный источник"
+      title: chunk.web?.title || "Источник"
     })).filter((s: any) => s.uri) || [];
 
     return { ...result, sources };
   } catch (error: any) {
-    console.error("Gemini API Error Details:", error);
-    // Пробрасываем ошибку выше для обработки в UI
+    // Если ошибка связана с отсутствием сущности, пробуем перевыбрать ключ
+    if (error.message?.includes("Requested entity was not found") && aistudio) {
+      await aistudio.openSelectKey();
+    }
+    console.error("Gemini API Error:", error);
     throw error;
   }
 }

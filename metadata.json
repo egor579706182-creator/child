@@ -1,0 +1,5 @@
+{
+  "name": "CommuniScale Pro",
+  "description": "A professional-grade diagnostic tool for assessing child communication disorders, utilizing Gemini AI and Google Search for evidence-based prognosis and recommendations across English, Russian, and German scientific databases.",
+  "requestFramePermissions": []
+}
